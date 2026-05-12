@@ -6,11 +6,9 @@ import os
 pygame.init()
 
 # Константы экрана
-SCREEN_WIDTH = 800
-SCREEN_HEIGHT = 600
-screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+SCREEN_WIDTH, SCREEN_HEIGHT = screen.get_size()
 pygame.display.set_caption("CatUni - подготовься к экзамену")
-FPS = 60
 
 # Цвета фона
 SKY = (135, 206, 235)
@@ -41,12 +39,12 @@ WARNING = (224, 224, 6)
 
 # Физика
 GRAVITY = 0.8
-JUMP = -10
-SPEED = 5
+JUMP = -15
+SPEED = 8
 
 
 # Загрузка изображений (для рыбки и преподавателя)
-def load_image(path, size=(50, 50)):
+def load_image(path, size=(100, 100)):
     if os.path.exists(path):
         try:
             img = pygame.image.load(path).convert_alpha()
@@ -59,7 +57,7 @@ def load_image(path, size=(50, 50)):
 # Рыбка
 class Fish:
     def __init__(self, x, y):
-        self.rect = pygame.Rect(x, y, 30, 30)
+        self.rect = pygame.Rect(x, y, 80, 80)
         self.image = load_image("images/fish.png", (30, 30))
         self.collected = False
 
@@ -70,12 +68,11 @@ class Fish:
             else:
                 pygame.draw.circle(screen, FISH, self.rect.center, 15)
 
-            # Преподаватель
 
-
+# Преподаватель
 class Teacher:
     def __init__(self, x, y):
-        self.rect = pygame.Rect(x, y, 50, 50)
+        self.rect = pygame.Rect(x, y, 120, 120)
         self.image = load_image("images/teacher.png", (50, 50))
 
     def draw(self, screen):
@@ -89,7 +86,7 @@ class Teacher:
 
 class Player:
     def __init__(self, x, y):
-        self.rect = pygame.Rect(x, y, 40, 40)
+        self.rect = pygame.Rect(x, y, 100, 100)
         self.vert_speed = 0
         self.on_ground = False
 
@@ -135,3 +132,64 @@ class Player:
         pygame.draw.circle(screen, WHITE, (self.rect.x + 28, self.rect.y + 15), 4)
         pygame.draw.circle(screen, BLACK, (self.rect.x + 12, self.rect.y + 15), 2)
         pygame.draw.circle(screen, BLACK, (self.rect.x + 28, self.rect.y + 15), 2)
+
+
+# Платформы
+class Platform:
+    def __init__(self, x, y, length):
+        self.rect = pygame.Rect(x, y, length, 100)
+
+    def draw(self, screen):
+        pygame.draw.rect(screen, GROUND, self.rect)
+
+
+# Создание уровня
+def generate_level():
+    platforms = []
+    x = 0
+    while x < SCREEN_WIDTH:
+        length = random.randint(400, 800)
+        platforms.append(Platform(x, SCREEN_HEIGHT - 300, length))
+
+        hole = random.randint(150, 300)
+        x += length + hole
+
+    return platforms
+
+
+# Главная рабочая часть
+FPS = 60
+clock = pygame.time.Clock()
+player = Player(100, SCREEN_HEIGHT - 600)
+platforms = generate_level()
+running = True
+
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+        if event.type == pygame.KEYDOWN:
+            if event.key in (pygame.K_w, pygame.K_UP):
+                player.jump()
+            if event.key == pygame.K_ESCAPE:
+                running = False
+
+    keys = pygame.key.get_pressed()
+    if keys[pygame.K_a] or keys[pygame.K_LEFT]:
+        player.move(-1)
+    if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
+        player.move(1)
+
+    if not player.update(platforms):
+        player = Player(100, SCREEN_HEIGHT - 600)
+        platforms = generate_level()
+
+    screen.fill(SKY)
+    for platform in platforms:
+        platform.draw(screen)
+    player.draw(screen)
+
+    pygame.display.flip()
+    clock.tick(FPS)
+
+pygame.quit()
