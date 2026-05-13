@@ -12,9 +12,8 @@ pygame.display.set_caption("CatUni - подготовься к экзамену"
 
 # Цвета фона
 SKY = (135, 206, 235)
-GROUND = (154, 215, 121)
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
+GROUND_GREEN = (154, 215, 121)
+GROUND_BROWN = (84, 53, 33)
 
 # Цвета котика
 CAT_SKINS = {
@@ -26,6 +25,9 @@ CAT_SKINS = {
 }
 CURRENT_SKIN = "orange"
 CAT_COLOR = CAT_SKINS[CURRENT_SKIN]
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+PINK = (237, 151, 205)
 
 # Цвета рыбки и преподавателя (если что-то произойдет с изображениями)
 FISH = (77, 97, 106)
@@ -61,12 +63,13 @@ class Fish:
         self.image = load_image("images/fish.png", (30, 30))
         self.collected = False
 
-    def draw(self, screen):
+    def draw(self, screen, camera):
         if not self.collected:
+            cam_move = self.rect.x - camera
             if self.image:
-                screen.blit(self.image, self.rect)
+                screen.blit(self.image, (cam_move, self.rect.y))
             else:
-                pygame.draw.circle(screen, FISH, self.rect.center, 15)
+                pygame.draw.circle(screen, FISH, (cam_move + 40, self.rect.y + 40), 40)
 
 
 # Преподаватель
@@ -75,11 +78,12 @@ class Teacher:
         self.rect = pygame.Rect(x, y, 120, 120)
         self.image = load_image("images/teacher.png", (50, 50))
 
-    def draw(self, screen):
+    def draw(self, screen, camera):
+        cam_move = self.rect.x - camera
         if self.image:
-            screen.blit(self.image, self.rect)
+            screen.blit(self.image, (cam_move, self.rect.y))
         else:
-            pygame.draw.rect(screen, TEACHER, self.rect)
+            pygame.draw.rect(screen, TEACHER, (cam_move, self.rect.y, 120, 120))
 
         # Игрок (котик)
 
@@ -113,55 +117,74 @@ class Player:
     def move(self, dx):
         self.rect.x += dx * SPEED
 
-    def draw(self, screen):
+    def draw(self, screen, camera):
+        cam_move = self.rect.x - camera
         # Тело
-        pygame.draw.rect(screen, CAT_COLOR, self.rect)
+        pygame.draw.rect(screen, CAT_COLOR, (cam_move, self.rect.y, 100, 100))
+
         # Уши
         pygame.draw.polygon(screen, CAT_COLOR, [
-            (self.rect.x, self.rect.y),
-            (self.rect.x + 10, self.rect.y - 12),
-            (self.rect.x + 20, self.rect.y)
+            (cam_move, self.rect.y),
+            (cam_move + 20, self.rect.y - 25),
+            (cam_move + 40, self.rect.y)
         ])
         pygame.draw.polygon(screen, CAT_COLOR, [
-            (self.rect.x + 10, self.rect.y),
-            (self.rect.x + 30, self.rect.y - 12),
-            (self.rect.x + 40, self.rect.y)
+            (cam_move + 60, self.rect.y),
+            (cam_move + 80, self.rect.y - 25),
+            (cam_move + 100, self.rect.y)
         ])
+        pygame.draw.polygon(screen, PINK, [
+            (cam_move + 10, self.rect.y),
+            (cam_move + 20, self.rect.y - 15),
+            (cam_move + 30, self.rect.y)
+        ])
+        pygame.draw.polygon(screen, PINK, [
+            (cam_move + 70, self.rect.y),
+            (cam_move + 80, self.rect.y - 15),
+            (cam_move + 90, self.rect.y)
+        ])
+
         # Глаза
-        pygame.draw.circle(screen, WHITE, (self.rect.x + 12, self.rect.y + 15), 4)
-        pygame.draw.circle(screen, WHITE, (self.rect.x + 28, self.rect.y + 15), 4)
-        pygame.draw.circle(screen, BLACK, (self.rect.x + 12, self.rect.y + 15), 2)
-        pygame.draw.circle(screen, BLACK, (self.rect.x + 28, self.rect.y + 15), 2)
+        pygame.draw.circle(screen, WHITE, (cam_move + 25, self.rect.y + 40), 12)
+        pygame.draw.circle(screen, WHITE, (cam_move + 75, self.rect.y + 40), 12)
+        pygame.draw.circle(screen, BLACK, (cam_move + 25, self.rect.y + 40), 6)
+        pygame.draw.circle(screen, BLACK, (cam_move + 75, self.rect.y + 40), 6)
+
+        # Нос
+        pygame.draw.polygon(screen, PINK, [
+            (cam_move + 43, self.rect.y + 55),
+            (cam_move + 50, self.rect.y + 62),
+            (cam_move + 57, self.rect.y + 55)
+        ])
 
 
 # Платформы
 class Platform:
     def __init__(self, x, y, length):
-        self.rect = pygame.Rect(x, y, length, 100)
+        self.rect = pygame.Rect(x, y, length, 300)
 
-    def draw(self, screen):
-        pygame.draw.rect(screen, GROUND, self.rect)
+    def draw(self, screen, camera):
+        cam_move = self.rect.x - camera
+        pygame.draw.rect(screen, GROUND_BROWN, (cam_move, self.rect.y, self.rect.width, self.rect.height))
+        pygame.draw.rect(screen, GROUND_GREEN, (cam_move, self.rect.y, self.rect.width, self.rect.height - 200))
 
 
 # Создание уровня
-def generate_level():
-    platforms = []
-    x = 0
-    while x < SCREEN_WIDTH:
-        length = random.randint(400, 800)
-        platforms.append(Platform(x, SCREEN_HEIGHT - 300, length))
+camera = 0
+next_platform = 0
+platforms = []
 
-        hole = random.randint(150, 300)
-        x += length + hole
-
-    return platforms
+for _ in range(5):
+    length = random.randint(400, 800)
+    platforms.append(Platform(next_platform, SCREEN_HEIGHT - 300, length))
+    hole = random.randint(150, 300)
+    next_platform += length + hole
 
 
 # Главная рабочая часть
 FPS = 60
 clock = pygame.time.Clock()
 player = Player(100, SCREEN_HEIGHT - 600)
-platforms = generate_level()
 running = True
 
 while running:
@@ -182,12 +205,33 @@ while running:
 
     if not player.update(platforms):
         player = Player(100, SCREEN_HEIGHT - 600)
-        platforms = generate_level()
+        camera = 0
+        next_platform = 0
+        platforms.clear()
+        for _ in range(5):
+            length = random.randint(400, 800)
+            platforms.append(Platform(next_platform, SCREEN_HEIGHT - 300, length))
+            hole = random.randint(150, 300)
+            next_platform += length + hole
+
+    camera_place = player.rect.centerx - SCREEN_WIDTH // 3
+    camera += (camera_place - camera) * 0.1
+    if camera < 0:
+        camera = 0
+
+    if player.rect.right > next_platform - SCREEN_WIDTH * 1.5:
+        for _ in range(5):
+            length = random.randint(400, 800)
+            platforms.append(Platform(next_platform, SCREEN_HEIGHT - 300, length))
+            hole = random.randint(150, 300)
+            next_platform += length + hole
+    platforms = [platform for platform in platforms if platform.rect.right > camera - 200]
+
 
     screen.fill(SKY)
     for platform in platforms:
-        platform.draw(screen)
-    player.draw(screen)
+        platform.draw(screen, camera)
+    player.draw(screen, camera)
 
     pygame.display.flip()
     clock.tick(FPS)
