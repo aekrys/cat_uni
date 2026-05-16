@@ -60,7 +60,7 @@ def load_image(path, size=(100, 100)):
 class Fish:
     def __init__(self, x, y):
         self.rect = pygame.Rect(x, y, 80, 80)
-        self.image = load_image("images/fish.png", (30, 30))
+        self.image = load_image("images/fish.png", (80, 80))
         self.collected = False
 
     def draw(self, screen, camera):
@@ -76,7 +76,7 @@ class Fish:
 class Teacher:
     def __init__(self, x, y):
         self.rect = pygame.Rect(x, y, 120, 120)
-        self.image = load_image("images/teacher.png", (50, 50))
+        self.image = load_image("images/teacher.png", (120, 120))
 
     def draw(self, screen, camera):
         cam_move = self.rect.x - camera
@@ -85,9 +85,8 @@ class Teacher:
         else:
             pygame.draw.rect(screen, TEACHER, (cam_move, self.rect.y, 120, 120))
 
-        # Игрок (котик)
 
-
+# Игрок (котик)
 class Player:
     def __init__(self, x, y):
         self.rect = pygame.Rect(x, y, 100, 100)
@@ -161,24 +160,37 @@ class Player:
 # Платформы
 class Platform:
     def __init__(self, x, y, length):
-        self.rect = pygame.Rect(x, y, length, 300)
+        self.rect = pygame.Rect(x, y, length, 200)
 
     def draw(self, screen, camera):
         cam_move = self.rect.x - camera
-        pygame.draw.rect(screen, GROUND_BROWN, (cam_move, self.rect.y, self.rect.width, self.rect.height))
-        pygame.draw.rect(screen, GROUND_GREEN, (cam_move, self.rect.y, self.rect.width, self.rect.height - 200))
+        brown_height = self.rect.height
+        pygame.draw.rect(screen, GROUND_BROWN, (cam_move, self.rect.y, self.rect.width, brown_height))
+        pygame.draw.rect(screen, GROUND_GREEN, (cam_move, self.rect.y, self.rect.width, self.rect.height - 120))
 
 
 # Создание уровня
-camera = 0
-next_platform = 0
-platforms = []
+def generate_platforms(start_platform):
+    new_platforms = []
+    new_fish = []
 
-for _ in range(5):
-    length = random.randint(400, 800)
-    platforms.append(Platform(next_platform, SCREEN_HEIGHT - 300, length))
-    hole = random.randint(150, 300)
-    next_platform += length + hole
+    for _ in range(5):
+        length = random.randint(400, 800)
+        height = SCREEN_HEIGHT - random.randint(250, 350)
+        new_platforms.append(Platform(start_platform, height, length))
+
+        if random.random() < 0.5:
+            fish = start_platform + random.randint(50, length - 50)
+            new_fish.append(Fish(fish, height - 80))
+
+        hole = random.randint(150, 250)
+        start_platform += length + hole
+
+    return new_platforms, new_fish, start_platform
+
+# Создание начального уровня
+camera = 0
+platforms, all_fish, next_platform = generate_platforms(0)
 
 
 # Главная рабочая часть
@@ -206,13 +218,8 @@ while running:
     if not player.update(platforms):
         player = Player(100, SCREEN_HEIGHT - 600)
         camera = 0
-        next_platform = 0
-        platforms.clear()
-        for _ in range(5):
-            length = random.randint(400, 800)
-            platforms.append(Platform(next_platform, SCREEN_HEIGHT - 300, length))
-            hole = random.randint(150, 300)
-            next_platform += length + hole
+        platforms, all_fish, next_platform = generate_platforms(0)
+
 
     camera_place = player.rect.centerx - SCREEN_WIDTH // 3
     camera += (camera_place - camera) * 0.1
@@ -220,17 +227,18 @@ while running:
         camera = 0
 
     if player.rect.right > next_platform - SCREEN_WIDTH * 1.5:
-        for _ in range(5):
-            length = random.randint(400, 800)
-            platforms.append(Platform(next_platform, SCREEN_HEIGHT - 300, length))
-            hole = random.randint(150, 300)
-            next_platform += length + hole
-    platforms = [platform for platform in platforms if platform.rect.right > camera - 200]
-
+        new_platforms, new_fish, next_platform = generate_platforms(next_platform)
+        platforms.extend(new_platforms)
+        all_fish.extend(new_fish)
 
     screen.fill(SKY)
+
     for platform in platforms:
         platform.draw(screen, camera)
+
+    for fish in all_fish:
+        fish.draw(screen, camera)
+
     player.draw(screen, camera)
 
     pygame.display.flip()
