@@ -2,6 +2,8 @@ import pygame
 import json
 import random
 import os
+import sys
+
 
 pygame.init()
 
@@ -59,8 +61,8 @@ def load_image(path, size=(100, 100)):
 # Рыбка
 class Fish:
     def __init__(self, x, y):
-        self.rect = pygame.Rect(x, y, 80, 80)
-        self.image = load_image("images/fish.png", (80, 80))
+        self.rect = pygame.Rect(x, y, 75, 75)
+        self.image = load_image("images/fish.png", (75, 75))
         self.collected = False
 
     def draw(self, screen, camera):
@@ -69,21 +71,21 @@ class Fish:
             if self.image:
                 screen.blit(self.image, (cam_move, self.rect.y))
             else:
-                pygame.draw.circle(screen, FISH, (cam_move + 40, self.rect.y + 40), 40)
+                pygame.draw.circle(screen, FISH, (cam_move + 75, self.rect.y + 75), 40)
 
 
 # Преподаватель
 class Teacher:
     def __init__(self, x, y):
-        self.rect = pygame.Rect(x, y, 120, 120)
-        self.image = load_image("images/teacher.png", (120, 120))
+        self.rect = pygame.Rect(x, y, 200, 200)
+        self.image = load_image("images/teacher.png", (200, 200))
 
     def draw(self, screen, camera):
         cam_move = self.rect.x - camera
         if self.image:
             screen.blit(self.image, (cam_move, self.rect.y))
         else:
-            pygame.draw.rect(screen, TEACHER, (cam_move, self.rect.y, 120, 120))
+            pygame.draw.rect(screen, TEACHER, (cam_move, self.rect.y, 200, 200))
 
 
 # Игрок (котик)
@@ -173,33 +175,83 @@ class Platform:
 def generate_platforms(start_platform):
     new_platforms = []
     new_fish = []
+    new_teachers = []
 
     for _ in range(5):
         length = random.randint(400, 800)
         height = SCREEN_HEIGHT - random.randint(250, 350)
         new_platforms.append(Platform(start_platform, height, length))
 
-        if random.random() < 0.5:
-            fish = start_platform + random.randint(50, length - 50)
-            new_fish.append(Fish(fish, height - 80))
+        chance = random.random()
+
+        if chance < 0.4:
+            fish = start_platform + random.randint(50, length - 80)
+            new_fish.append(Fish(fish, height - random.randint(60, 250)))
+
+        elif chance < 0.7:
+            teacher = start_platform + random.randint(50, length - 160)
+            new_teachers.append(Teacher(teacher, height - 180))
 
         hole = random.randint(150, 250)
         start_platform += length + hole
 
-    return new_platforms, new_fish, start_platform
+    return new_platforms, new_fish, new_teachers, start_platform
+
+
+def load_questions(discipline_name="example"):
+    path = os.path.join("data", f"{discipline_name}.json")
+    try:
+        with open(path, "r", encoding="utf-8") as file:
+            data = json.load(file)
+            questions = data.get("questions", [])
+            if not questions:
+                print("Список вопросов пуст")
+                sys.exit(1)
+            return questions
+    except FileNotFoundError:
+        print("Файл не найден")
+        sys.exit(1)
+    except json.JSONDecodeError as e:
+        print("Неверный формат файла")
+        sys.exit(1)
+
 
 # Создание начального уровня
 camera = 0
-platforms, all_fish, next_platform = generate_platforms(0)
+platforms, all_fish, all_teachers, next_platform = generate_platforms(0)
 
+fish_count = 0
+
+pause = False
+active_teacher = None
+questions = load_questions("example")
+current_question = None
+
+question_state = 1  # 1 - вопрос, 2 - ответ, 3 - результат
+button_show_answer = None
+button_correct_answer = None
+button_wrong_answer = None
+button_continue = None
+
+
+def draw_button(screen, x, y, width, height, text, color, text_color=WHITE, font_size=None):
+    pygame.draw.rect(screen, color, (x, y, width, height), border_radius=10)
+    pygame.draw.rect(screen, WHITE, (x, y, width, height), 2, border_radius=10)
+    fnt = font if font_size is None else pygame.font.Font(None, font_size)
+    text_surf = fnt.render(text, True, text_color)
+    screen.blit(text_surf, (x + width // 2 - text_surf.get_width() // 2,
+                           y + height // 2 - text_surf.get_height() // 2))
+    return pygame.Rect(x, y, width, height)
 
 # Главная рабочая часть
+font = pygame.font.Font(None, int(SCREEN_HEIGHT * 0.05))
 FPS = 60
 clock = pygame.time.Clock()
 player = Player(100, SCREEN_HEIGHT - 600)
 running = True
 
 while running:
+    # Действия кнопок
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
@@ -209,37 +261,97 @@ while running:
             if event.key == pygame.K_ESCAPE:
                 running = False
 
+    # Игра на паузе (задается вопрос)
+    if pause:
+        # Отрисовка
+        screen.fill(SKY)
+        for platform in platforms:
+            platform.draw(screen, camera)
+        for fish in all_fish:
+            fish.draw(screen, camera)
+        for teacher in all_teachers:
+            teacher.draw(screen, camera)
+        player.draw(screen, camera)
+
+        overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 180))
+        screen.blit(overlay, (0, 0))
+
+        title = font.render("Встреча с преподавателем", True, WARNING)
+        screen.blit(title, (SCREEN_WIDTH//2 - title.get_width()//2, 50))
+
+        if current_question:
+            question_text = current_question["question"]
+            lines = [question_text[i:i+100] for i in range(0, len(question_text), 100)]
+            question_y = 120
+            for line in lines:
+                question_surf = font.render(line, True, WHITE)
+                screen.blit(question_surf, (SCREEN_WIDTH // 2 - question_surf.get_width() // 2, question_y))
+                question_y += 50
+
+        button_show_answer = None
+        button_correct_answer = None
+        button_wrong_answer = None
+        button_continue = None
+
+        pygame.display.flip()
+        clock.tick(FPS)
+        continue
+
+
+    # Направление движения
     keys = pygame.key.get_pressed()
     if keys[pygame.K_a] or keys[pygame.K_LEFT]:
         player.move(-1)
     if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
         player.move(1)
 
+    # Действия при падении в яму (рестарт)
     if not player.update(platforms):
         player = Player(100, SCREEN_HEIGHT - 600)
         camera = 0
-        platforms, all_fish, next_platform = generate_platforms(0)
+        platforms, all_fish, all_teachers, next_platform = generate_platforms(0)
+        fish_count = 0
 
+    # Собираем рыбу
+    for fish in all_fish:
+        if not fish.collected and player.rect.colliderect(fish.rect):
+            fish.collected = True
+            fish_count += 1
 
+    # Столкновение с преподавателем
+    for teacher in all_teachers:
+        if player.rect.colliderect(teacher.rect):
+            pause = True
+            active_teacher = teacher
+            if questions:
+                current_question = random.choice(questions)
+            break
+
+    # Движение камеры
     camera_place = player.rect.centerx - SCREEN_WIDTH // 3
     camera += (camera_place - camera) * 0.1
     if camera < 0:
         camera = 0
 
     if player.rect.right > next_platform - SCREEN_WIDTH * 1.5:
-        new_platforms, new_fish, next_platform = generate_platforms(next_platform)
+        new_platforms, new_fish, new_teachers, next_platform = generate_platforms(next_platform)
         platforms.extend(new_platforms)
         all_fish.extend(new_fish)
+        all_teachers.extend(new_teachers)
 
+    # Отрисовка
     screen.fill(SKY)
-
     for platform in platforms:
         platform.draw(screen, camera)
-
     for fish in all_fish:
         fish.draw(screen, camera)
-
+    for teacher in all_teachers:
+        teacher.draw(screen, camera)
     player.draw(screen, camera)
+
+    score_fish = font.render(f"Рыбок собрано: {fish_count}", True, TEXT)
+    screen.blit(score_fish, (15, 15))
 
     pygame.display.flip()
     clock.tick(FPS)
