@@ -79,6 +79,7 @@ class Teacher:
     def __init__(self, x, y):
         self.rect = pygame.Rect(x, y, 200, 200)
         self.image = load_image("images/teacher.png", (200, 200))
+        self.interacted = False
 
     def draw(self, screen, camera):
         cam_move = self.rect.x - camera
@@ -228,6 +229,7 @@ questions = load_questions("example")
 current_question = None
 
 question_state = 1  # 1 - вопрос, 2 - ответ, 3 - результат
+last_answer_correct = False
 button_show_answer = None
 button_correct_answer = None
 button_wrong_answer = None
@@ -282,7 +284,7 @@ while running:
 
         if current_question:
             question_text = current_question["question"]
-            lines = [question_text[i:i+100] for i in range(0, len(question_text), 100)]
+            lines = [question_text[i:i+60] for i in range(0, len(question_text), 60)]
             question_y = 120
             for line in lines:
                 question_surf = font.render(line, True, WHITE)
@@ -293,6 +295,58 @@ while running:
         button_correct_answer = None
         button_wrong_answer = None
         button_continue = None
+
+        # Вопрос
+        if question_state == 1:
+            button_show_answer = draw_button(screen,
+                                             SCREEN_WIDTH // 2 - 150, SCREEN_HEIGHT // 2 + 50,
+                                             300, 60, "Показать ответ", WARNING)
+
+        # Ответ
+        elif question_state == 2:
+            answer_text = current_question.get("answer")
+            answer_lines = [answer_text[i:i+80] for i in range(0, len(answer_text), 80)]
+            answer_y = SCREEN_HEIGHT // 2 + 150
+            for line in answer_lines:
+                answer_surf = font.render(line, True, RIGHT)
+                screen.blit(answer_surf, (SCREEN_WIDTH // 2 - answer_surf.get_width() // 2, answer_y))
+                answer_y += 50
+
+                button_correct_answer = draw_button(screen,
+                                                    SCREEN_WIDTH // 2 - 400, SCREEN_HEIGHT - 150,
+                                                    320, 70, "Мой ответ ВЕРНЫЙ", RIGHT, font_size=40)
+                button_wrong_answer = draw_button(screen,
+                                                    SCREEN_WIDTH // 2 + 80, SCREEN_HEIGHT - 150,
+                                                    320, 70, "Мой ответ НЕВЕРНЫЙ", WRONG, font_size=40)
+
+        # Результат
+        elif question_state == 3:
+            message = "Так держать!" if last_answer_correct else "Повтори материал"
+            color = RIGHT if last_answer_correct else WRONG
+            message_surf = font.render(message, True, color)
+            screen.blit(message_surf, (SCREEN_WIDTH // 2 - message_surf.get_width() // 2, SCREEN_HEIGHT // 2 + 150))
+            button_continue = draw_button(screen,
+                                      SCREEN_WIDTH//2 - 150, SCREEN_HEIGHT - 150,
+                                      300, 70, "Продолжить", TEXT, font_size=40)
+
+        mouse_position = pygame.mouse.get_pos()
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if question_state == 1 and button_show_answer and button_show_answer.collidepoint(mouse_position):
+                    question_state = 2
+                elif question_state == 2 and button_correct_answer and button_correct_answer.collidepoint(mouse_position):
+                    last_answer_correct = True
+                    question_state = 3
+                elif question_state == 2 and button_wrong_answer and button_wrong_answer.collidepoint(mouse_position):
+                    last_answer_correct = False
+                    question_state = 3
+                elif question_state == 3 and button_continue and button_continue.collidepoint(mouse_position):
+                    pause = False
+                    question_state = 1
+                    current_question = None
+
 
         pygame.display.flip()
         clock.tick(FPS)
@@ -312,6 +366,8 @@ while running:
         camera = 0
         platforms, all_fish, all_teachers, next_platform = generate_platforms(0)
         fish_count = 0
+        pause = False
+        question_state = 1
 
     # Собираем рыбу
     for fish in all_fish:
@@ -321,9 +377,10 @@ while running:
 
     # Столкновение с преподавателем
     for teacher in all_teachers:
-        if player.rect.colliderect(teacher.rect):
+        if not teacher.interacted and player.rect.colliderect(teacher.rect):
             pause = True
             active_teacher = teacher
+            teacher.interacted = True
             if questions:
                 current_question = random.choice(questions)
             break
