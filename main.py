@@ -199,7 +199,7 @@ def generate_platforms(start_platform):
     return new_platforms, new_fish, new_teachers, start_platform
 
 
-def load_questions(discipline_name="example"):
+def load_questions(discipline_name="kol"):
     path = os.path.join("data", f"{discipline_name}.json")
     try:
         with open(path, "r", encoding="utf-8") as file:
@@ -225,7 +225,7 @@ fish_count = 0
 
 pause = False
 active_teacher = None
-questions = load_questions("example")
+questions = load_questions("kol")
 current_question = None
 
 question_state = 1  # 1 - вопрос, 2 - ответ, 3 - результат
@@ -244,6 +244,48 @@ def draw_button(screen, x, y, width, height, text, color, text_color=WHITE, font
     screen.blit(text_surf, (x + width // 2 - text_surf.get_width() // 2,
                            y + height // 2 - text_surf.get_height() // 2))
     return pygame.Rect(x, y, width, height)
+
+
+def parse_answer(answer_data, max_line_length=60):
+    if isinstance(answer_data, list):
+        result = []
+        for item in answer_data:
+            if len(item) <= max_line_length:
+                result.append(item)
+            else:
+                words = item.split()
+                current = ""
+                for word in words:
+                    if len(current) + len(word) + 1 <= max_line_length:
+                        current += (" " if current else "") + word
+                    else:
+                        if current:
+                            result.append(current)
+                        current = word
+                if current:
+                    result.append(current)
+        return result
+    elif isinstance(answer_data, str):
+        lines = answer_data.split("\n")
+        result = []
+        for line in lines:
+            if len(line) <= max_line_length:
+                result.append(line)
+            else:
+                words = line.split()
+                current = ""
+                for word in words:
+                    if len(current) + len(word) + 1 <= max_line_length:
+                        current += (" " if current else "") + word
+                    else:
+                        if current:
+                            result.append(current)
+                        current = word
+                if current:
+                    result.append(current)
+        return result
+    else:
+        return [str(answer_data)]
 
 # Главная рабочая часть
 font = pygame.font.Font(None, int(SCREEN_HEIGHT * 0.05))
@@ -282,6 +324,7 @@ while running:
         title = font.render("Встреча с преподавателем", True, WARNING)
         screen.blit(title, (SCREEN_WIDTH//2 - title.get_width()//2, 50))
 
+        answer_start_y = 120
         if current_question:
             question_text = current_question["question"]
             lines = [question_text[i:i+60] for i in range(0, len(question_text), 60)]
@@ -290,6 +333,7 @@ while running:
                 question_surf = font.render(line, True, WHITE)
                 screen.blit(question_surf, (SCREEN_WIDTH // 2 - question_surf.get_width() // 2, question_y))
                 question_y += 50
+            answer_start_y = question_y + 30
 
         button_show_answer = None
         button_correct_answer = None
@@ -304,20 +348,23 @@ while running:
 
         # Ответ
         elif question_state == 2:
-            answer_text = current_question.get("answer")
-            answer_lines = [answer_text[i:i+80] for i in range(0, len(answer_text), 80)]
-            answer_y = SCREEN_HEIGHT // 2 + 150
+            raw_answer = current_question.get("answer", "")
+            answer_lines = parse_answer(raw_answer, max_line_length=60)
+            answer_y = answer_start_y
             for line in answer_lines:
                 answer_surf = font.render(line, True, RIGHT)
+                text_x = max(SCREEN_WIDTH * 0.05,
+                             SCREEN_WIDTH // 2 - answer_surf.get_width() // 2)
+                text_x = min(text_x, SCREEN_WIDTH * 0.95 - answer_surf.get_width())
                 screen.blit(answer_surf, (SCREEN_WIDTH // 2 - answer_surf.get_width() // 2, answer_y))
                 answer_y += 50
 
-                button_correct_answer = draw_button(screen,
-                                                    SCREEN_WIDTH // 2 - 400, SCREEN_HEIGHT - 150,
-                                                    320, 70, "Мой ответ ВЕРНЫЙ", RIGHT, font_size=40)
-                button_wrong_answer = draw_button(screen,
-                                                    SCREEN_WIDTH // 2 + 80, SCREEN_HEIGHT - 150,
-                                                    320, 70, "Мой ответ НЕВЕРНЫЙ", WRONG, font_size=40)
+            button_correct_answer = draw_button(screen,
+                                                SCREEN_WIDTH // 2 - 400, SCREEN_HEIGHT - 150,
+                                                320, 70, "Мой ответ ВЕРНЫЙ", RIGHT, font_size=40)
+            button_wrong_answer = draw_button(screen,
+                                                SCREEN_WIDTH // 2 + 80, SCREEN_HEIGHT - 150,
+                                                320, 70, "Мой ответ НЕВЕРНЫЙ", WRONG, font_size=40)
 
         # Результат
         elif question_state == 3:
