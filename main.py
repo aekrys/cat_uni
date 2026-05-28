@@ -49,6 +49,10 @@ SPEED = 8
 
 # Загрузка изображений (для рыбки и преподавателя)
 def load_image(path, size=(100, 100)):
+    """
+    Загружает изображение, масштабирует до size, возвращает None при ошибке
+    """
+
     if os.path.exists(path):
         try:
             img = pygame.image.load(path).convert_alpha()
@@ -61,11 +65,19 @@ def load_image(path, size=(100, 100)):
 # Рыбка
 class Fish:
     def __init__(self, x, y):
+        """
+        Создаёт объект рыбки: задаёт прямоугольник, загружает спрайт, флаг collected=False
+        """
+
         self.rect = pygame.Rect(x, y, 75, 75)
         self.image = load_image("images/fish.png", (75, 75))
         self.collected = False
 
     def draw(self, screen, camera):
+        """
+        Отрисовывает рыбку: картинка или круг-заглушка
+        """
+
         if not self.collected:
             cam_move = self.rect.x - camera
             if self.image:
@@ -77,11 +89,19 @@ class Fish:
 # Преподаватель
 class Teacher:
     def __init__(self, x, y):
+        """
+        Создаёт преподавателя: прямоугольник, спрайт, флаг interacted=False
+        """
+
         self.rect = pygame.Rect(x, y, 200, 200)
         self.image = load_image("images/teacher.png", (200, 200))
         self.interacted = False
 
     def draw(self, screen, camera):
+        """
+        Отрисовывает учителя: картинка или цветной прямоугольник
+        """
+
         cam_move = self.rect.x - camera
         if self.image:
             screen.blit(self.image, (cam_move, self.rect.y))
@@ -92,11 +112,19 @@ class Teacher:
 # Игрок (котик)
 class Player:
     def __init__(self, x, y):
+        """
+        Инициализирует котика: позиция, скорость, флаг on_ground
+        """
+
         self.rect = pygame.Rect(x, y, 100, 100)
         self.vert_speed = 0
         self.on_ground = False
 
     def update(self, platforms):
+        """
+        Применяет гравитацию, проверяет коллизии с платформами, возвращает False при падении в яму
+        """
+
         self.vert_speed += GRAVITY
         self.rect.y += self.vert_speed
         self.on_ground = False
@@ -113,13 +141,25 @@ class Player:
         return True
 
     def jump(self):
+        """
+        Задаёт отрицательную вертикальную скорость (прыжок), только если котик на земле
+        """
+
         if self.on_ground:
             self.vert_speed = JUMP
 
     def move(self, dx):
+        """
+        Сдвигает котика по горизонтали с учётом SPEED
+        """
+
         self.rect.x += dx * SPEED
 
     def draw(self, screen, camera):
+        """
+        Рисует котика
+        """
+
         cam_move = self.rect.x - camera
         # Тело
         pygame.draw.rect(screen, CAT_COLOR, (cam_move, self.rect.y, 100, 100))
@@ -163,9 +203,17 @@ class Player:
 # Платформы
 class Platform:
     def __init__(self, x, y, length):
+        """
+        Создаёт платформу: прямоугольник с заданной длиной и фиксированной высотой
+        """
+
         self.rect = pygame.Rect(x, y, length, 200)
 
     def draw(self, screen, camera):
+        """
+        Рисует платформу - земля с травой
+        """
+
         cam_move = self.rect.x - camera
         brown_height = self.rect.height
         pygame.draw.rect(screen, GROUND_BROWN, (cam_move, self.rect.y, self.rect.width, brown_height))
@@ -174,6 +222,11 @@ class Platform:
 
 # Создание уровня
 def generate_platforms(start_platform):
+    """
+    Генерирует часть уровня - 5 платформ
+    Случайная высота, вероятность появления рыбки/преподавателя
+    """
+
     new_platforms = []
     new_fish = []
     new_teachers = []
@@ -200,6 +253,10 @@ def generate_platforms(start_platform):
 
 
 def load_questions(discipline_name="kol"):
+    """
+    Загружает вопросы из data/{name}.json, валидирует формат, завершает игру при ошибке
+    """
+
     path = os.path.join("data", f"{discipline_name}.json")
     try:
         with open(path, "r", encoding="utf-8") as file:
@@ -237,6 +294,10 @@ button_continue = None
 
 
 def draw_button(screen, x, y, width, height, text, color, text_color=WHITE, font_size=None):
+    """
+    Рисует кнопку с рамкой, текстом по центру, возвращает Rect для кликов
+    """
+
     pygame.draw.rect(screen, color, (x, y, width, height), border_radius=10)
     pygame.draw.rect(screen, WHITE, (x, y, width, height), 2, border_radius=10)
     fnt = font if font_size is None else pygame.font.Font(None, font_size)
@@ -247,6 +308,9 @@ def draw_button(screen, x, y, width, height, text, color, text_color=WHITE, font
 
 
 def parse_answer(answer_data, max_line_length=60):
+    """
+    Принимает строку/список/\n, возвращает список строк для отрисовки с переносом
+    """
     if isinstance(answer_data, list):
         result = []
         for item in answer_data:
@@ -438,11 +502,14 @@ while running:
     if camera < 0:
         camera = 0
 
-    if player.rect.right > next_platform - SCREEN_WIDTH * 1.5:
+    if player.rect.right > next_platform - SCREEN_WIDTH * 2:
         new_platforms, new_fish, new_teachers, next_platform = generate_platforms(next_platform)
         platforms.extend(new_platforms)
         all_fish.extend(new_fish)
         all_teachers.extend(new_teachers)
+
+    platforms = [platform for platform in platforms if platform.rect.right > camera - 200]
+    all_fish = [fish for fish in all_fish if fish.rect.right > camera - 200]
 
     # Отрисовка
     screen.fill(SKY)
