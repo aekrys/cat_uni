@@ -1,0 +1,1 @@
+from images.loader import load_image
