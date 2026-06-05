@@ -1,6 +1,6 @@
 import pygame
 from algorithms import Player, Fish, Platform, generate_platforms, camera_move, CAT_SKINS
-from algorithms.button import draw_button, create_button
+from algorithms.button import create_button
 
 pygame.init()
 
@@ -42,6 +42,14 @@ clock = pygame.time.Clock()
 player = Player(100, SCREEN_HEIGHT - 600)
 running = True
 
+def start_game():
+    global player, camera, platforms, all_fish, next_platform, fish_count
+    player = Player(100, SCREEN_HEIGHT - 600)
+    player.set_skin(current_skin)
+    camera = 0
+    platforms, all_fish, next_platform = generate_platforms(0, SCREEN_HEIGHT)
+    fish_count = 0
+
 while running:
     mouse_pos = pygame.mouse.get_pos()
 
@@ -60,15 +68,16 @@ while running:
                 elif game_state == STATE_PAUSE:
                     game_state = STATE_PLAYING
             if event.key == pygame.K_ESCAPE:
-                if game_state == STATE_PLAYING or game_state == STATE_PAUSE:
-                    game_state = STATE_MENU
-                else:
+                if game_state == STATE_MENU:
                     running = False
+                else:
+                    game_state = STATE_MENU
 
         # Мышка
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if game_state == STATE_MENU:
                 if button_start.collidepoint(event.pos):
+                    start_game()
                     game_state = STATE_PLAYING
                 elif button_skin_change.collidepoint(event.pos):
                     game_state = STATE_SKIN_CHANGE
@@ -101,10 +110,7 @@ while running:
 
         # Действия при падении в яму (рестарт)
         if not player.update(platforms, SCREEN_HEIGHT):
-            player = Player(100, SCREEN_HEIGHT - 600)
-            camera = 0
-            platforms, all_fish, next_platform = generate_platforms(0, SCREEN_HEIGHT)
-            fish_count = 0
+            start_game()
 
         # Собираем рыбу
         for fish in all_fish:
@@ -120,6 +126,7 @@ while running:
             platforms.extend(new_platforms)
             all_fish.extend(new_fish)
 
+        # Очистка для оптимизации
         platforms = [platform for platform in platforms if platform.rect.right > camera - 200]
         all_fish = [fish for fish in all_fish if fish.rect.right > camera - 200]
 
@@ -178,9 +185,9 @@ while running:
         center_y = SCREEN_HEIGHT // 2 - 40
         button_resume = create_button(screen, center_x, center_y, "Продолжить", font, mouse_pos)
 
-        # Кнопка "В меню"
+        # Кнопка "Закончить игру"
         center_y = SCREEN_HEIGHT // 2 + 80
-        button_menu = create_button(screen, center_x, center_y, "В меню", font, mouse_pos)
+        button_menu = create_button(screen, center_x, center_y, "Закончить игру", font, mouse_pos)
 
 
     elif game_state == STATE_SKIN_CHANGE:
@@ -188,24 +195,24 @@ while running:
 
         skin_text = font_title.render("Выбери цвет котика", True, TEXT)
         screen.blit(skin_text, (SCREEN_WIDTH // 2 - skin_text.get_width() // 2,
-                                 SCREEN_HEIGHT // 2 - 250))
+                                 SCREEN_HEIGHT // 2 - 350))
 
         skin_names = list(CAT_SKINS.keys())
         skin_size = 200
         gap = 50
         width = len(skin_names) * skin_size + (len(skin_names) - 1) * gap
         first_skin_x = SCREEN_WIDTH // 2 - width // 2
-        skin_y = SCREEN_HEIGHT // 2 - 50
+        skin_y = SCREEN_HEIGHT // 2 - 150
 
         skin_rects = []
 
+        # Выбор цвета котика
         for i, skin_name in enumerate(skin_names):
             x = first_skin_x + i * (skin_size + gap)
 
             color = CAT_SKINS[skin_name]
             skin_rect = pygame.Rect(x, skin_y, skin_size, skin_size)
 
-            # Обводка выбранного скина
             border_color = GREEN if skin_name == current_skin else WHITE
             border_width = 5 if skin_name == current_skin else 3
 
@@ -218,11 +225,21 @@ while running:
 
             skin_rects.append((skin_rect, skin_name))
 
-        center_x = SCREEN_WIDTH // 2 + 400
-        center_y = SCREEN_HEIGHT // 2 + 300
+
+        # Котик выбранного цвета на платформе
+        player.rect.x = SCREEN_WIDTH // 2 - 150
+        player.rect.y = SCREEN_HEIGHT // 2 + 150
+        player.set_skin(current_skin)
+        player.draw(screen, 0)
+
+        platform = Platform(SCREEN_WIDTH // 2 - 300, SCREEN_HEIGHT // 2 + 250, 400)
+        platform.draw(screen, 0)
+
+
+        # Возвращаемся в меню
+        center_x = SCREEN_WIDTH // 2 + 500
+        center_y = SCREEN_HEIGHT // 2 + 350
         button_back = create_button(screen, center_x, center_y, "Назад в меню", font, mouse_pos)
-
-
 
 
     pygame.display.flip()
