@@ -1,5 +1,6 @@
 import pygame
-from algorithms import Player, Fish, Platform, generate_platforms, camera_move, CAT_SKINS
+
+from algorithms import Player, Fish, Platform, Spike, Heart, generate_platforms, camera_move, CAT_SKINS
 from algorithms.button import create_button
 
 pygame.init()
@@ -27,11 +28,12 @@ WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 GREEN = (110, 240, 40)
 
+
 # Создание начального уровня
 camera = 0
-platforms, all_fish,  next_platform = generate_platforms(0, SCREEN_HEIGHT)
-
+platforms, all_fish, all_spikes, next_platform = generate_platforms(0, SCREEN_HEIGHT)
 fish_count = 0
+lives = 3
 
 
 # Главная рабочая часть
@@ -43,12 +45,13 @@ player = Player(100, SCREEN_HEIGHT - 600)
 running = True
 
 def start_game():
-    global player, camera, platforms, all_fish, next_platform, fish_count
+    global player, camera, platforms, all_fish, all_spikes, next_platform, fish_count, lives
     player = Player(100, SCREEN_HEIGHT - 600)
     player.set_skin(current_skin)
     camera = 0
-    platforms, all_fish, next_platform = generate_platforms(0, SCREEN_HEIGHT)
+    platforms, all_fish, all_spikes, next_platform = generate_platforms(0, SCREEN_HEIGHT)
     fish_count = 0
+    lives = 3
 
 while running:
     mouse_pos = pygame.mouse.get_pos()
@@ -87,6 +90,9 @@ while running:
             elif game_state == STATE_PAUSE:
                 if button_resume.collidepoint(event.pos):
                     game_state = STATE_PLAYING
+                elif button_restart.collidepoint(event.pos):
+                    game_state = STATE_PLAYING
+                    start_game()
                 elif button_menu.collidepoint(event.pos):
                     game_state = STATE_MENU
 
@@ -118,17 +124,30 @@ while running:
                 fish.collected = True
                 fish_count += 1
 
+        # Столкновение с шипами
+        for spike in all_spikes:
+            if player.rect.colliderect(spike.rect):
+                lives -= 1
+                if lives < 1:
+                    start_game()
+                else:
+                    player.rect.x -= 150
+                    player.rect.y = SCREEN_HEIGHT - 500
+                break
+
         # Камера
         camera = camera_move(camera, player.rect.centerx, SCREEN_WIDTH)
 
         if player.rect.right > next_platform - SCREEN_WIDTH * 2:
-            new_platforms, new_fish, next_platform = generate_platforms(next_platform, SCREEN_HEIGHT)
+            new_platforms, new_fish, new_spikes, next_platform = generate_platforms(next_platform, SCREEN_HEIGHT)
             platforms.extend(new_platforms)
             all_fish.extend(new_fish)
+            all_spikes.extend(new_spikes)
 
         # Очистка для оптимизации
         platforms = [platform for platform in platforms if platform.rect.right > camera - 200]
         all_fish = [fish for fish in all_fish if fish.rect.right > camera - 200]
+        all_spikes = [spike for spike in all_spikes if spike.rect.right > camera - 200]
 
         # Отрисовка
         screen.fill(SKY)
@@ -136,10 +155,20 @@ while running:
             platform.draw(screen, camera)
         for fish in all_fish:
             fish.draw(screen, camera)
+        for spike in all_spikes:
+            spike.draw(screen, camera)
         player.draw(screen, camera)
 
         score_fish = font.render(f"Рыбок собрано: {fish_count}", True, TEXT)
         screen.blit(score_fish, (15, 15))
+
+        heart_size = 20
+        heart_space = 80
+        first_heart_x = SCREEN_WIDTH - 250
+
+        for i in range(lives):
+            heart = Heart(first_heart_x + i * heart_space, 30, heart_size)
+            heart.draw(screen)
 
 
     if game_state == STATE_MENU:
@@ -177,7 +206,7 @@ while running:
 
         pause_text = font_title.render("ПАУЗА", True, WHITE)
         screen.blit(pause_text, (SCREEN_WIDTH // 2 - pause_text.get_width() // 2,
-                                 SCREEN_HEIGHT // 2 - 250))
+                                 SCREEN_HEIGHT // 2 - 300))
 
         center_x = SCREEN_WIDTH // 2
 
@@ -185,8 +214,12 @@ while running:
         center_y = SCREEN_HEIGHT // 2 - 40
         button_resume = create_button(screen, center_x, center_y, "Продолжить", font, mouse_pos)
 
-        # Кнопка "Закончить игру"
+        # Кнопка "Начать заново"
         center_y = SCREEN_HEIGHT // 2 + 80
+        button_restart = create_button(screen, center_x, center_y, "Начать заново", font, mouse_pos)
+
+        # Кнопка "Закончить игру"
+        center_y = SCREEN_HEIGHT // 2 + 200
         button_menu = create_button(screen, center_x, center_y, "Закончить игру", font, mouse_pos)
 
 

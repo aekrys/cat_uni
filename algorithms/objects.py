@@ -23,6 +23,12 @@ PINK = (237, 151, 205)
 # Цвет рыбки (если что-то произойдет с изображениями)
 FISH = (77, 97, 106)
 
+# Цвет шипов
+SPIKE = (90, 20, 20)
+
+# Цвет сердец
+RED = (225, 50, 50)
+
 # Интерфейс
 TEXT = (40, 40, 50)
 
@@ -177,3 +183,51 @@ class Platform:
         brown_height = self.rect.height
         pygame.draw.rect(screen, GROUND_BROWN, (cam_move, self.rect.y, self.rect.width, brown_height))
         pygame.draw.rect(screen, GROUND_GREEN, (cam_move, self.rect.y, self.rect.width, self.rect.height - 120))
+
+
+
+# Шипы
+class Spike:
+    def __init__(self, x, y):
+        self.rect = pygame.Rect(x, y, 40, 40)
+
+    def draw(self, screen, camera):
+        cam_move = self.rect.x - camera
+        pygame.draw.polygon(screen, SPIKE, [
+            (cam_move + 25, self.rect.y),
+            (cam_move, self.rect.y + 50),
+            (cam_move + 50, self.rect.y + 50)
+        ])
+
+
+
+# Жизни
+class Heart:
+    def __init__(self, x, y, size=20):
+        self.x = x
+        self.y = y
+        self.size = size
+        self.image = load_image("images/heart.png", (75, 75))
+
+    def draw(self, screen):
+        """
+        Отрисовывает сердце: картинка или круг-заглушка
+        """
+        if self.image:
+            screen.blit(self.image, (
+                self.x - self.size,
+                self.y - self.size
+            ))
+        else:
+            left_center = (self.x - self.size // 2, self.y)
+            right_center = (self.x + self.size // 2, self.y)
+
+            pygame.draw.circle(screen, RED, left_center, self.size // 2)
+            pygame.draw.circle(screen, RED, right_center, self.size // 2)
+
+            triangle_points = [
+                (self.x - self.size, self.y),  # Левый край
+                (self.x + self.size, self.y),  # Правый край
+                (self.x, self.y + int(self.size * 1.5))  # Нижний кончик
+            ]
+            pygame.draw.polygon(screen, RED, triangle_points)
