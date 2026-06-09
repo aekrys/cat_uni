@@ -1,5 +1,5 @@
 import random
-from algorithms.objects import Platform, Fish, Spike
+from algorithms.objects import Platform, Fish, Spike, Bird
 
 
 # Создание уровня
@@ -12,6 +12,7 @@ def generate_platforms(start_platform, screen_height):
     new_platforms = []
     new_fish = []
     new_spikes = []
+    new_birds = []
 
     for i in range(5):
         length = random.randint(400, 800)
@@ -24,15 +25,20 @@ def generate_platforms(start_platform, screen_height):
         else:
             chance = random.random()
 
-            if chance < 0.3:
+            if chance < 0.2:
                 fish = start_platform + random.randint(50, length - 80)
                 new_fish.append(Fish(fish, height - random.randint(60, 250)))
 
-            elif chance < 0.6:
+            elif chance < 0.45:
                 spike = start_platform + random.randint(100, length - 150)
                 new_spikes.append(Spike(spike, height - 50))
+
+            elif chance < 0.7:
+                bird_x = start_platform + random.randint(200, length - 100)
+                bird_y = height - random.randint(150, 300)
+                new_birds.append(Bird(bird_x, bird_y))
 
         hole = random.randint(150, 250)
         start_platform += length + hole
 
-    return new_platforms, new_fish, new_spikes, start_platform
+    return new_platforms, new_fish, new_spikes, new_birds, start_platform

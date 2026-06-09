@@ -26,8 +26,11 @@ FISH = (77, 97, 106)
 # Цвет шипов
 SPIKE = (90, 20, 20)
 
-# Цвет сердец
+# Цвет сердец (если что-то произойдет с изображением)
 RED = (225, 50, 50)
+
+# Цвет птицы (если что-то произойдет с изображением)
+BIRD = (75, 70, 90)
 
 # Интерфейс
 TEXT = (40, 40, 50)
@@ -211,7 +214,7 @@ class Heart:
 
     def draw(self, screen):
         """
-        Отрисовывает сердце: картинка или круг-заглушка
+        Отрисовывает сердце: картинка или заглушка
         """
         if self.image:
             screen.blit(self.image, (
@@ -231,3 +234,52 @@ class Heart:
                 (self.x, self.y + int(self.size * 1.5))  # Нижний кончик
             ]
             pygame.draw.polygon(screen, RED, triangle_points)
+
+
+
+# Птица
+class Bird:
+    def __init__(self, x, y):
+        """
+        Создаёт объект птицы: задаёт прямоугольник, загружает спрайт
+        """
+
+        self.rect = pygame.Rect(x, y, 90, 90)
+        self.image = load_image("images/bird.png", (90, 90))
+        self.attacked = False
+        self.speed = -7
+
+    def update(self):
+        self.rect.x += self.speed
+
+    def draw(self, screen, camera):
+        """
+        Отрисовывает птицу: картинка или заглушка
+        """
+
+        if not self.attacked:
+            cam_move = self.rect.x - camera
+            if self.image:
+                screen.blit(self.image, (cam_move, self.rect.y))
+            else:
+                # Тело
+                pygame.draw.rect(screen, BIRD, (cam_move + 25, self.rect.y + 25, 45, 45))
+
+                # Клюв
+                pygame.draw.polygon(screen, BIRD, [
+                    (cam_move + 25, self.rect.y + 35),
+                    (cam_move + 25, self.rect.y + 50),
+                    (cam_move + 10, self.rect.y + 40)
+                ])
+
+                # Крыло
+                pygame.draw.polygon(screen, BIRD, [
+                    (cam_move + 35, self.rect.y + 25),
+                    (cam_move + 60, self.rect.y + 25),
+                    (cam_move + 45, self.rect.y)
+                ])
+
+                # Глаз
+                pygame.draw.circle(screen, BLACK, (cam_move + 35, self.rect.y + 35), 3)
+
+
