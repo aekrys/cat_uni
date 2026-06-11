@@ -28,6 +28,9 @@ WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 GREEN = (110, 240, 40)
 
+# Царапины
+RED = (225, 50, 50)
+
 
 # Создание начального уровня
 camera = 0
@@ -37,7 +40,6 @@ lives = 3
 attack_timer = 0
 
 
-# Главная рабочая часть
 font = pygame.font.Font(None, int(SCREEN_HEIGHT * 0.05))
 font_title = pygame.font.Font(None, int(SCREEN_HEIGHT * 0.2))
 FPS = 60
@@ -53,7 +55,22 @@ def start_game():
     platforms, all_fish, all_spikes, all_birds, next_platform = generate_platforms(0, SCREEN_HEIGHT)
     fish_count = 0
     lives = 3
+    attack_timer = 0
 
+
+def claw(screen, x, y):
+    for i, size in enumerate([3, 4, 2]):
+        shift_x = i * 15
+        start_x = x + 10 + shift_x
+        start_y = y + 60 + i * 5
+        end_x = x + 50 + shift_x
+        end_y = y + 10 + i * 5
+
+        pygame.draw.line(screen, RED, (start_x, start_y), (end_x, end_y), size)
+
+
+
+# Главная рабочая часть
 while running:
     mouse_pos = pygame.mouse.get_pos()
 
@@ -130,7 +147,7 @@ while running:
 
         # Движение птиц
         for bird in all_birds:
-            bird.update()
+            bird.update(player.rect)
 
         # Столкновение с шипами
         for spike in all_spikes:
@@ -159,7 +176,7 @@ while running:
         if attack_timer > 0:
             attack_timer -= 1
 
-            attack_rect = pygame.Rect(player.rect.right, player.rect.y + 20, 50, 50)
+            attack_rect = pygame.Rect(player.rect.right - 10, player.rect.y + 10, 80, 80)
             for bird in all_birds:
                 if not bird.attacked and attack_rect.colliderect(bird.rect):
                     bird.attacked = True
@@ -192,6 +209,9 @@ while running:
         for bird in all_birds:
             bird.draw(screen, camera)
         player.draw(screen, camera)
+
+        if attack_timer > 0:
+            claw(screen, player.rect.right - 10 - camera, player.rect.y + 10)
 
         score_fish = font.render(f"Рыбок собрано: {fish_count}", True, TEXT)
         screen.blit(score_fish, (15, 15))

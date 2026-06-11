@@ -20,17 +20,11 @@ WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 PINK = (237, 151, 205)
 
-# Цвет рыбки (если что-то произойдет с изображениями)
+# Цвета рыбки, сердец, птицы (если что-то произойдет с изображениями) и шипов
 FISH = (77, 97, 106)
-
-# Цвет шипов
-SPIKE = (90, 20, 20)
-
-# Цвет сердец (если что-то произойдет с изображением)
 RED = (225, 50, 50)
-
-# Цвет птицы (если что-то произойдет с изображением)
 BIRD = (75, 70, 90)
+SPIKE = (90, 20, 20)
 
 # Интерфейс
 TEXT = (40, 40, 50)
@@ -238,6 +232,10 @@ class Heart:
 
 
 # Птица
+BIRD_FLYING = 0
+BIRD_DOWN = 1
+BIRD_UP = 2
+
 class Bird:
     def __init__(self, x, y):
         """
@@ -247,10 +245,52 @@ class Bird:
         self.rect = pygame.Rect(x, y, 90, 90)
         self.image = load_image("images/bird.png", (90, 90))
         self.attacked = False
+
+        self.state = BIRD_FLYING
+        self.height = y
         self.speed = -7
 
-    def update(self):
-        self.rect.x += self.speed
+        self.down_speed = [0, 0]
+        self.detect = 500
+        self.range_down = 200
+
+
+    def update(self, player_rect):
+        if self.attacked:
+            return
+
+        if self.state == BIRD_FLYING:
+            self.rect.x +=self.speed
+
+            bird_center_x = self.rect.centerx
+            player_center_x = player_rect.centerx
+
+            if abs(player_center_x - bird_center_x) < self.detect:
+                if player_rect.y > self.rect.y:
+                    self.state = BIRD_DOWN
+
+                    dx = player_center_x - bird_center_x
+                    dy = player_rect.centery - self.rect.centery
+
+                    distance = max(1, (dx**2 + dy**2)**0.5)
+                    self.down_speed[0] = (dx / distance) * 8
+                    self.down_speed[1] = (dy / distance) * 8
+
+        elif self.state == BIRD_DOWN:
+            self.rect.x += self.down_speed[0]
+            self.rect.y += self.down_speed[1]
+
+            if self.rect.y > self.height + self.range_down:
+                self.state = BIRD_UP
+
+        elif self.state == BIRD_UP:
+            self.rect.x += self.speed
+            self.rect.y -= 3
+
+            if self.rect.y <= self.height:
+                self.rect.y = self.height
+                self.state = BIRD_FLYING
+
 
     def draw(self, screen, camera):
         """
@@ -281,5 +321,3 @@ class Bird:
 
                 # Глаз
                 pygame.draw.circle(screen, BLACK, (cam_move + 35, self.rect.y + 35), 3)
-
-
