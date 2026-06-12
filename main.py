@@ -1,6 +1,8 @@
 import pygame
 
-from algorithms import Player, Fish, Platform, Spike, Heart, Bird, generate_platforms, camera_move, CAT_SKINS
+from algorithms import (Player, Fish, Platform, Spike, Heart, Bird,
+                        generate_platforms, camera_move, CAT_SKINS,
+                        load_record, save_record)
 from algorithms.button import create_button
 
 pygame.init()
@@ -38,6 +40,7 @@ platforms, all_fish, all_spikes, all_birds, next_platform = generate_platforms(0
 fish_count = 0
 lives = 3
 attack_timer = 0
+best_score = load_record()
 
 
 font = pygame.font.Font(None, int(SCREEN_HEIGHT * 0.05))
@@ -48,11 +51,16 @@ player = Player(100, SCREEN_HEIGHT - 600)
 running = True
 
 def start_game():
-    global player, camera, platforms, all_fish, all_spikes, all_birds, next_platform, fish_count, lives
+    global player, camera, platforms, all_fish, all_spikes, all_birds, next_platform, fish_count, lives, attack_timer, best_score
     player = Player(100, SCREEN_HEIGHT - 600)
     player.set_skin(current_skin)
     camera = 0
     platforms, all_fish, all_spikes, all_birds, next_platform = generate_platforms(0, SCREEN_HEIGHT)
+
+    if fish_count > best_score:
+        best_score = fish_count
+        save_record(best_score)
+
     fish_count = 0
     lives = 3
     attack_timer = 0
@@ -137,6 +145,9 @@ while running:
 
         # Действия при падении в яму (рестарт)
         if not player.update(platforms, SCREEN_HEIGHT):
+            if fish_count > best_score:
+                best_score = fish_count
+                save_record(best_score)
             start_game()
 
         # Собираем рыбу
@@ -216,6 +227,9 @@ while running:
         score_fish = font.render(f"Рыбок собрано: {fish_count}", True, TEXT)
         screen.blit(score_fish, (15, 15))
 
+        record_text = font.render(f"Рекорд: {best_score}", True, TEXT)
+        screen.blit(record_text, (15, 50))
+
         heart_size = 20
         heart_space = 80
         first_heart_x = SCREEN_WIDTH - 250
@@ -231,6 +245,10 @@ while running:
         title = font_title.render("CatUni", True, TEXT)
         screen.blit(title, (SCREEN_WIDTH // 2 - title.get_width() // 2,
                             SCREEN_HEIGHT // 2 - 350))
+
+        record_text = font.render(f"Рекорд: {best_score}", True, TEXT)
+        screen.blit(record_text, (SCREEN_WIDTH // 2 - record_text.get_width() // 2,
+                                  SCREEN_HEIGHT // 2 - 200))
 
         mouse_pos = pygame.mouse.get_pos()
 
