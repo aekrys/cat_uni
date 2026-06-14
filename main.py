@@ -6,6 +6,7 @@ from algorithms import (Player, Fish, Platform, Spike, Heart, Bird,
 from algorithms.button import create_button
 
 pygame.init()
+pygame.mixer.init()
 
 # Константы экрана
 screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
@@ -45,6 +46,26 @@ best_score = load_record()
 
 font = pygame.font.Font(None, int(SCREEN_HEIGHT * 0.05))
 font_title = pygame.font.Font(None, int(SCREEN_HEIGHT * 0.2))
+
+
+# Звуки
+collect_sound = pygame.mixer.Sound("sounds/collect.wav")
+collect_sound.set_volume(0.5)
+
+attack_sound = pygame.mixer.Sound("sounds/attack.wav")
+attack_sound.set_volume(0.2)
+
+damage_sound = pygame.mixer.Sound("sounds/damage.wav")
+damage_sound.set_volume(0.4)
+
+death_sound = pygame.mixer.Sound("sounds/death.wav")
+death_sound.set_volume(0.5)
+
+pygame.mixer.music.load("sounds/background.wav")
+pygame.mixer.music.set_volume(0.02)
+pygame.mixer.music.play(-1)
+
+
 FPS = 60
 clock = pygame.time.Clock()
 player = Player(100, SCREEN_HEIGHT - 600)
@@ -91,8 +112,9 @@ while running:
         if event.type == pygame.KEYDOWN:
             if event.key in (pygame.K_w, pygame.K_UP):
                 player.jump()
-            if event.key in (pygame.K_s, pygame.K_DOWN):
+            if event.key in (pygame.K_s, pygame.K_DOWN) and game_state == STATE_PLAYING:
                 attack_timer = 10
+                attack_sound.play()
 
             if event.key == pygame.K_SPACE:
                 if game_state == STATE_PLAYING:
@@ -145,9 +167,7 @@ while running:
 
         # Действия при падении в яму (рестарт)
         if not player.update(platforms, SCREEN_HEIGHT):
-            if fish_count > best_score:
-                best_score = fish_count
-                save_record(best_score)
+            death_sound.play()
             start_game()
 
         # Собираем рыбу
@@ -155,6 +175,7 @@ while running:
             if not fish.collected and player.rect.colliderect(fish.rect):
                 fish.collected = True
                 fish_count += 1
+                collect_sound.play()
 
         # Движение птиц
         for bird in all_birds:
@@ -165,8 +186,10 @@ while running:
             if player.rect.colliderect(spike.rect):
                 lives -= 1
                 if lives < 1:
+                    death_sound.play()
                     start_game()
                 else:
+                    damage_sound.play()
                     player.rect.x -= 150
                     player.rect.y = SCREEN_HEIGHT - 500
                 break
@@ -177,8 +200,10 @@ while running:
                 bird.attacked = True
                 lives -= 1
                 if lives < 1:
+                    death_sound.play()
                     start_game()
                 else:
+                    damage_sound.play()
                     player.rect.x -= 150
                     player.rect.y = SCREEN_HEIGHT - 500
                 break
@@ -274,6 +299,10 @@ while running:
             platform.draw(screen, camera)
         for fish in all_fish:
             fish.draw(screen, camera)
+        for spike in all_spikes:
+            spike.draw(screen, camera)
+        for bird in all_birds:
+            bird.draw(screen, camera)
         player.draw(screen, camera)
 
         pause_text = font_title.render("ПАУЗА", True, WHITE)
