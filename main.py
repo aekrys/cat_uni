@@ -4,6 +4,7 @@ from algorithms import (Player, Fish, Platform, Spike, Heart, Bird,
                         generate_platforms, camera_move, CAT_SKINS,
                         load_record, save_record)
 from algorithms.button import create_button
+from algorithms.clouds import create_clouds, update_clouds
 
 pygame.init()
 pygame.mixer.init()
@@ -53,7 +54,7 @@ collect_sound = pygame.mixer.Sound("sounds/collect.wav")
 collect_sound.set_volume(0.5)
 
 attack_sound = pygame.mixer.Sound("sounds/attack.wav")
-attack_sound.set_volume(0.2)
+attack_sound.set_volume(0.1)
 
 damage_sound = pygame.mixer.Sound("sounds/damage.wav")
 damage_sound.set_volume(0.4)
@@ -64,6 +65,18 @@ death_sound.set_volume(0.5)
 pygame.mixer.music.load("sounds/background.wav")
 pygame.mixer.music.set_volume(0.02)
 pygame.mixer.music.play(-1)
+
+
+# Фон
+CLOUD_IMAGES = [
+    "images/cloud_1.png",
+    "images/cloud_2.png",
+    "images/cloud_3.png",
+    "images/cloud_4.png",
+    "images/cloud_5.png",
+]
+all_clouds = create_clouds(SCREEN_WIDTH, CLOUD_IMAGES)
+
 
 
 FPS = 60
@@ -177,6 +190,9 @@ while running:
                 fish_count += 1
                 collect_sound.play()
 
+        # Фон
+        update_clouds(all_clouds, SCREEN_WIDTH, CLOUD_IMAGES)
+
         # Движение птиц
         for bird in all_birds:
             bird.update(player.rect)
@@ -236,6 +252,8 @@ while running:
 
         # Отрисовка
         screen.fill(SKY)
+        for cloud in all_clouds:
+            cloud.draw(screen)
         for platform in platforms:
             platform.draw(screen, camera)
         for fish in all_fish:
