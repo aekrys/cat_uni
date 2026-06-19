@@ -1,4 +1,4 @@
-from algorithms.objects import Player, Fish, Platform, Spike, Heart, Bird, CAT_SKINS
+from algorithms.objects import Player, Fish, Platform, Spike, Heart, Bird, Booster, CAT_SKINS, create_random_booster
 from algorithms.level_generator import generate_platforms
 from algorithms.camera import camera_move
 from algorithms.button import draw_button, create_button

@@ -2,9 +2,8 @@ import pygame
 
 from algorithms import (Player, Fish, Platform, Spike, Heart, Bird,
                         generate_platforms, camera_move, CAT_SKINS,
-                        load_record, save_record)
+                        load_record, save_record, Booster, create_random_booster)
 from algorithms.button import create_button
-from algorithms.clouds import create_clouds, update_clouds
 
 pygame.init()
 pygame.mixer.init()
@@ -38,7 +37,7 @@ RED = (225, 50, 50)
 
 # Создание начального уровня
 camera = 0
-platforms, all_fish, all_spikes, all_birds, next_platform = generate_platforms(0, SCREEN_HEIGHT)
+platforms, all_fish, all_spikes, all_birds, all_boosters, next_platform = generate_platforms(0, SCREEN_HEIGHT)
 fish_count = 0
 lives = 3
 attack_timer = 0
@@ -54,7 +53,7 @@ collect_sound = pygame.mixer.Sound("sounds/collect.wav")
 collect_sound.set_volume(0.5)
 
 attack_sound = pygame.mixer.Sound("sounds/attack.wav")
-attack_sound.set_volume(0.1)
+attack_sound.set_volume(0.15)
 
 damage_sound = pygame.mixer.Sound("sounds/damage.wav")
 damage_sound.set_volume(0.4)
@@ -67,18 +66,6 @@ pygame.mixer.music.set_volume(0.02)
 pygame.mixer.music.play(-1)
 
 
-# Фон
-CLOUD_IMAGES = [
-    "images/cloud_1.png",
-    "images/cloud_2.png",
-    "images/cloud_3.png",
-    "images/cloud_4.png",
-    "images/cloud_5.png",
-]
-all_clouds = create_clouds(SCREEN_WIDTH, CLOUD_IMAGES)
-
-
-
 FPS = 60
 clock = pygame.time.Clock()
 player = Player(100, SCREEN_HEIGHT - 600)
@@ -89,7 +76,7 @@ def start_game():
     player = Player(100, SCREEN_HEIGHT - 600)
     player.set_skin(current_skin)
     camera = 0
-    platforms, all_fish, all_spikes, all_birds, next_platform = generate_platforms(0, SCREEN_HEIGHT)
+    platforms, all_fish, all_spikes, all_birds, all_boosters, next_platform = generate_platforms(0, SCREEN_HEIGHT)
 
     if fish_count > best_score:
         best_score = fish_count
@@ -190,8 +177,12 @@ while running:
                 fish_count += 1
                 collect_sound.play()
 
-        # Фон
-        update_clouds(all_clouds, SCREEN_WIDTH, CLOUD_IMAGES)
+        # Собираем бустер
+        for booster in all_boosters:
+            if not booster.collected and player.rect.colliderect(booster.rect):
+                booster.collected = True
+                booster.apply(player)
+                collect_sound.play()
 
         # Движение птиц
         for bird in all_birds:
@@ -199,7 +190,7 @@ while running:
 
         # Столкновение с шипами
         for spike in all_spikes:
-            if player.rect.colliderect(spike.rect):
+            if player.rect.colliderect(spike.rect) and player.shield_booster_time == 0:
                 lives -= 1
                 if lives < 1:
                     death_sound.play()
@@ -212,7 +203,7 @@ while running:
 
         # Столкновение с птицами
         for bird in all_birds:
-            if not bird.attacked and player.rect.colliderect(bird.rect):
+            if not bird.attacked and player.rect.colliderect(bird.rect) and player.shield_booster_time == 0:
                 bird.attacked = True
                 lives -= 1
                 if lives < 1:
@@ -238,22 +229,22 @@ while running:
         camera = camera_move(camera, player.rect.centerx, SCREEN_WIDTH)
 
         if player.rect.right > next_platform - SCREEN_WIDTH * 2:
-            new_platforms, new_fish, new_spikes, new_birds, next_platform = generate_platforms(next_platform, SCREEN_HEIGHT)
+            new_platforms, new_fish, new_spikes, new_birds, new_boosters, next_platform = generate_platforms(next_platform, SCREEN_HEIGHT)
             platforms.extend(new_platforms)
             all_fish.extend(new_fish)
             all_spikes.extend(new_spikes)
             all_birds.extend(new_birds)
+            all_boosters.extend(new_boosters)
 
         # Очистка для оптимизации
         platforms = [platform for platform in platforms if platform.rect.right > camera - 200]
         all_fish = [fish for fish in all_fish if fish.rect.right > camera - 200]
         all_spikes = [spike for spike in all_spikes if spike.rect.right > camera - 200]
         all_birds = [bird for bird in all_birds if bird.rect.right > camera - 200]
+        all_boosters = [booster for booster in all_boosters if booster.rect.right > camera - 200]
 
         # Отрисовка
         screen.fill(SKY)
-        for cloud in all_clouds:
-            cloud.draw(screen)
         for platform in platforms:
             platform.draw(screen, camera)
         for fish in all_fish:
@@ -262,6 +253,8 @@ while running:
             spike.draw(screen, camera)
         for bird in all_birds:
             bird.draw(screen, camera)
+        for booster in all_boosters:
+            booster.draw(screen, camera)
         player.draw(screen, camera)
 
         if attack_timer > 0:
@@ -280,6 +273,8 @@ while running:
         for i in range(lives):
             heart = Heart(first_heart_x + i * heart_space, 30, heart_size)
             heart.draw(screen)
+
+        player.draw_boosters(screen, SCREEN_WIDTH - 250, 100)
 
 
     if game_state == STATE_MENU:

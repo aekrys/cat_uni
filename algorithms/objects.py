@@ -1,4 +1,5 @@
 import pygame
+import random
 from images import load_image
 
 # Цвета фона
@@ -20,11 +21,17 @@ WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 PINK = (237, 151, 205)
 
-# Цвета рыбки, сердец, птицы (если что-то произойдет с изображениями) и шипов
+# Цвета рыбки, сердец, птицы, бустера (если что-то произойдет с изображениями) и шипов
 FISH = (77, 97, 106)
 RED = (225, 50, 50)
 BIRD = (75, 70, 90)
+BOOSTER = (240, 230, 5)
 SPIKE = (90, 20, 20)
+
+# Цвета бустеров
+SPEED_COLOR = (195, 130, 245)
+SHIELD_COLOR = (25, 90, 120)
+JUMP_COLOR = (170, 210, 85)
 
 # Интерфейс
 TEXT = (40, 40, 50)
@@ -72,11 +79,22 @@ class Player:
         self.vert_speed = 0
         self.on_ground = False
 
+        self.speed_booster_time = 0
+        self.shield_booster_time = 0
+        self.jump_booster_time = 0
+
 
     def update(self, platforms, screen_height):
         """
         Применяет гравитацию, проверяет коллизии с платформами, возвращает False при падении в яму
         """
+
+        if self.speed_booster_time > 0:
+            self.speed_booster_time -= 1
+        if self.shield_booster_time > 0:
+            self.shield_booster_time -= 1
+        if self.jump_booster_time > 0:
+            self.jump_booster_time -= 1
 
         self.vert_speed += GRAVITY
         self.rect.y += self.vert_speed
@@ -100,7 +118,8 @@ class Player:
         """
 
         if self.on_ground:
-            self.vert_speed = JUMP
+            current_jump = JUMP if self.jump_booster_time == 0 else JUMP * 2
+            self.vert_speed = current_jump
 
 
     def move(self, dx):
@@ -108,7 +127,8 @@ class Player:
         Сдвигает котика по горизонтали с учётом SPEED
         """
 
-        self.rect.x += dx * SPEED
+        current_speed = SPEED if self.speed_booster_time == 0 else SPEED * 2
+        self.rect.x += dx * current_speed
 
 
     def draw(self, screen, camera):
@@ -117,6 +137,7 @@ class Player:
         """
 
         cam_move = self.rect.x - camera
+
         # Тело
         pygame.draw.rect(screen, CAT_COLOR, (cam_move, self.rect.y, 100, 100))
 
@@ -160,6 +181,25 @@ class Player:
         global CAT_COLOR
         if skin_name in CAT_SKINS:
             CAT_COLOR = CAT_SKINS[skin_name]
+
+    def draw_boosters(self, screen, x, y):
+        timer = 400
+        bar_width = 200
+        bar_height = 30
+        shift = 0
+
+        active_boosters = [
+            (self.speed_booster_time, SPEED_COLOR),
+            (self.shield_booster_time, SHIELD_COLOR),
+            (self.jump_booster_time, JUMP_COLOR)
+        ]
+
+        for time, color in active_boosters:
+            if time > 0:
+                fill_width = int(bar_width * (time / timer))
+                pygame.draw.rect(screen, color, (x, y + shift, fill_width, bar_height))
+                pygame.draw.rect(screen, WHITE, (x, y + shift, bar_width, bar_height), 2)
+                shift += 40
 
 
 # Платформы
@@ -321,3 +361,38 @@ class Bird:
 
                 # Глаз
                 pygame.draw.circle(screen, BLACK, (cam_move + 35, self.rect.y + 35), 3)
+
+
+
+# Бустеры
+class Booster:
+    def __init__(self, x, y):
+        self.rect = pygame.Rect(x, y, 80, 80)
+        self.image = load_image("images/booster.png", (80, 80))
+        self.collected = False
+
+    def draw(self, screen, camera):
+        if not self.collected:
+            cam_move = self.rect.x - camera
+            if self.image:
+                screen.blit(self.image, (cam_move, self.rect.y))
+            else:
+                pygame.draw.circle(screen, BOOSTER, (cam_move + 30, self.rect.y + 30), 28)
+
+class SpeedBooster(Booster):
+    def apply(self, player):
+        player.speed_booster_time = 400
+
+class ShieldBooster(Booster):
+    def apply(self, player):
+        player.shield_booster_time = 400
+
+class JumpBooster(Booster):
+    def apply(self, player):
+        player.jump_booster_time = 400
+
+ALL_BOOSTERS = [SpeedBooster, ShieldBooster, JumpBooster]
+
+def create_random_booster(x, y):
+    booster_class = random.choice(ALL_BOOSTERS)
+    return booster_class(x, y)
