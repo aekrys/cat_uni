@@ -89,6 +89,7 @@ class Player:
         Применяет гравитацию, проверяет коллизии с платформами, возвращает False при падении в яму
         """
 
+        # Уменьшаем время бустеров, если они есть
         if self.speed_booster_time > 0:
             self.speed_booster_time -= 1
         if self.shield_booster_time > 0:
@@ -114,7 +115,8 @@ class Player:
 
     def jump(self):
         """
-        Задаёт отрицательную вертикальную скорость (прыжок), только если котик на земле
+        Прыжок только если котик на земле
+        Прыжок вдвое выше при наличии бустера
         """
 
         if self.on_ground:
@@ -125,6 +127,7 @@ class Player:
     def move(self, dx):
         """
         Сдвигает котика по горизонтали с учётом SPEED
+        Скорость вдвое больше при наличии бустера
         """
 
         current_speed = SPEED if self.speed_booster_time == 0 else SPEED * 2
@@ -133,7 +136,7 @@ class Player:
 
     def draw(self, screen, camera):
         """
-        Рисует котика
+        Отрисовывает котика
         """
 
         cam_move = self.rect.x - camera
@@ -178,11 +181,19 @@ class Player:
 
 
     def set_skin(self, skin_name):
+        """
+        Меняет цвет котика
+        """
+
         global CAT_COLOR
         if skin_name in CAT_SKINS:
             CAT_COLOR = CAT_SKINS[skin_name]
 
     def draw_boosters(self, screen, x, y):
+        """
+        Отрисовывает шкалы бустеров (если есть)
+        """
+
         timer = 400
         bar_width = 200
         bar_height = 30
@@ -213,7 +224,7 @@ class Platform:
 
     def draw(self, screen, camera):
         """
-        Рисует платформу - земля с травой
+        Отрисовывает платформу - земля с травой
         """
 
         cam_move = self.rect.x - camera
@@ -226,9 +237,16 @@ class Platform:
 # Шипы
 class Spike:
     def __init__(self, x, y):
+        """
+        Инициализирует шип
+        """
+
         self.rect = pygame.Rect(x, y, 40, 40)
 
     def draw(self, screen, camera):
+        """
+        Отрисовывает шип: треугольник
+        """
         cam_move = self.rect.x - camera
         pygame.draw.polygon(screen, SPIKE, [
             (cam_move + 25, self.rect.y),
@@ -241,6 +259,10 @@ class Spike:
 # Жизни
 class Heart:
     def __init__(self, x, y, size=20):
+        """
+        Инициализирует сердечко-жизнь
+        """
+
         self.x = x
         self.y = y
         self.size = size
@@ -296,6 +318,10 @@ class Bird:
 
 
     def update(self, player_rect):
+        """
+        Обновление состояний: полет - вниз на игрока - вверх на свою высоту
+        """
+
         if self.attacked:
             return
 
@@ -305,10 +331,12 @@ class Bird:
             bird_center_x = self.rect.centerx
             player_center_x = player_rect.centerx
 
+            # Обнаружение игрока
             if abs(player_center_x - bird_center_x) < self.detect:
                 if player_rect.y > self.rect.y:
                     self.state = BIRD_DOWN
 
+                    # Изменение направления
                     dx = player_center_x - bird_center_x
                     dy = player_rect.centery - self.rect.centery
 
@@ -367,11 +395,18 @@ class Bird:
 # Бустеры
 class Booster:
     def __init__(self, x, y):
+        """
+        Родительский класс бустера
+        """
+
         self.rect = pygame.Rect(x, y, 80, 80)
         self.image = load_image("images/booster.png", (80, 80))
         self.collected = False
 
     def draw(self, screen, camera):
+        """
+        Отрисовывает бустер: картинка или круг-заглушка
+        """
         if not self.collected:
             cam_move = self.rect.x - camera
             if self.image:
@@ -379,20 +414,44 @@ class Booster:
             else:
                 pygame.draw.circle(screen, BOOSTER, (cam_move + 30, self.rect.y + 30), 28)
 
+    def apply(self, player):
+        """
+        Игрок получает эффект (метод переопределяется в классах-наследниках)
+        """
+
+        pass
+
+
 class SpeedBooster(Booster):
+    """
+    Бустер скорости на 400 кадров (наследник от Booster)
+    """
+
     def apply(self, player):
         player.speed_booster_time = 400
 
 class ShieldBooster(Booster):
+    """
+    Бустер щит на 400 кадров (наследник от Booster)
+    """
+
     def apply(self, player):
         player.shield_booster_time = 400
 
 class JumpBooster(Booster):
+    """
+    Бустер прыжка на 400 кадров (наследник от Booster)
+    """
+
     def apply(self, player):
         player.jump_booster_time = 400
 
 ALL_BOOSTERS = [SpeedBooster, ShieldBooster, JumpBooster]
 
 def create_random_booster(x, y):
+    """
+    Создание случайного бустера
+    """
+
     booster_class = random.choice(ALL_BOOSTERS)
     return booster_class(x, y)

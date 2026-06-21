@@ -1,9 +1,12 @@
 import pygame
 
-from algorithms import (Player, Fish, Platform, Spike, Heart, Bird,
-                        generate_platforms, camera_move, CAT_SKINS,
-                        load_record, save_record, Booster, create_random_booster)
+from algorithms.objects import Player, Fish, Platform, Spike, Heart, Bird, CAT_SKINS
+from algorithms.objects import Booster, create_random_booster
+from algorithms.level_generator import generate_platforms
+from algorithms.camera import camera_move
+from algorithms.record import load_record, save_record
 from algorithms.button import create_button
+
 
 pygame.init()
 pygame.mixer.init()
@@ -44,6 +47,7 @@ attack_timer = 0
 best_score = load_record()
 
 
+# Шрифты
 font = pygame.font.Font(None, int(SCREEN_HEIGHT * 0.05))
 font_title = pygame.font.Font(None, int(SCREEN_HEIGHT * 0.2))
 
@@ -66,11 +70,14 @@ pygame.mixer.music.set_volume(0.02)
 pygame.mixer.music.play(-1)
 
 
+# Настройка игрового цикла
 FPS = 60
 clock = pygame.time.Clock()
 player = Player(100, SCREEN_HEIGHT - 600)
 running = True
 
+
+# Перезапуск игры
 def start_game():
     global player, camera, platforms, all_fish, all_spikes, all_birds, next_platform, fish_count, lives, attack_timer, best_score
     player = Player(100, SCREEN_HEIGHT - 600)
@@ -87,6 +94,7 @@ def start_game():
     attack_timer = 0
 
 
+# Отрисовка атаки
 def claw(screen, x, y):
     for i, size in enumerate([3, 4, 2]):
         shift_x = i * 15
@@ -156,7 +164,7 @@ while running:
                     game_state = STATE_MENU
 
 
-
+    # Игровое состояние - ИГРА
     if game_state == STATE_PLAYING:
         # Направление движения
         keys = pygame.key.get_pressed()
@@ -228,6 +236,7 @@ while running:
         # Камера
         camera = camera_move(camera, player.rect.centerx, SCREEN_WIDTH)
 
+        # Бесконечная генерация уровня
         if player.rect.right > next_platform - SCREEN_WIDTH * 2:
             new_platforms, new_fish, new_spikes, new_birds, new_boosters, next_platform = generate_platforms(next_platform, SCREEN_HEIGHT)
             platforms.extend(new_platforms)
@@ -266,6 +275,7 @@ while running:
         record_text = font.render(f"Рекорд: {best_score}", True, TEXT)
         screen.blit(record_text, (15, 50))
 
+        # Отрисовка жизней и бустеров
         heart_size = 20
         heart_space = 80
         first_heart_x = SCREEN_WIDTH - 250
@@ -277,6 +287,7 @@ while running:
         player.draw_boosters(screen, SCREEN_WIDTH - 250, 100)
 
 
+    # Игровое состояние - МЕНЮ
     if game_state == STATE_MENU:
         screen.fill(SKY)
 
@@ -305,6 +316,7 @@ while running:
         button_quit = create_button(screen, center_x, center_y, "Выйти из игры", font, mouse_pos)
 
 
+    # Игровое состояние - ПАУЗА
     elif game_state == STATE_PAUSE:
         # Отрисовка
         screen.fill(SKY)
@@ -337,6 +349,7 @@ while running:
         button_menu = create_button(screen, center_x, center_y, "Закончить игру", font, mouse_pos)
 
 
+    # Игровое состояние - СМЕНА СКИНА
     elif game_state == STATE_SKIN_CHANGE:
         screen.fill(SKY)
 
@@ -344,6 +357,7 @@ while running:
         screen.blit(skin_text, (SCREEN_WIDTH // 2 - skin_text.get_width() // 2,
                                  SCREEN_HEIGHT // 2 - 350))
 
+        # Расчет координат для красивого отображения скинов
         skin_names = list(CAT_SKINS.keys())
         skin_size = 200
         gap = 50
@@ -388,7 +402,7 @@ while running:
         center_y = SCREEN_HEIGHT // 2 + 350
         button_back = create_button(screen, center_x, center_y, "Назад в меню", font, mouse_pos)
 
-
+    # Обновление экрана + контроль скорости игры
     pygame.display.flip()
     clock.tick(FPS)
 

@@ -6,7 +6,8 @@ from algorithms.objects import Platform, Fish, Spike, Bird, Booster, create_rand
 def generate_platforms(start_platform, screen_height):
     """
     Генерирует часть уровня - 5 платформ
-    Случайная высота, вероятность появления рыбки
+    Случайная высота
+    Вероятность появления рыбки, шипа, птицы и бустера
     """
 
     new_platforms = []
@@ -21,7 +22,7 @@ def generate_platforms(start_platform, screen_height):
         new_platforms.append(Platform(start_platform, height, length))
 
         if i == 0:
-            pass
+            pass  # Первая платформа без объектов
 
         else:
             chance = random.random()
